@@ -63,7 +63,7 @@ impl Timer {
                     "no timer kevents",
                 ))
             }
-            n => unreachable!(),
+            n => unreachable!("somehow got {} events when waiting for at most 1", n),
         }
     }
 }
