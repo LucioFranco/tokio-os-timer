@@ -26,15 +26,15 @@ impl Timer {
         // We want the smallest unit that we can use without overflow, so:
         let mut unit = FilterFlag::NOTE_NSECONDS;
         let mut time = time.as_nanos();
-        if time > isize::max_value() {
+        if time > isize::max_value() as u128 {
             unit = FilterFlag::NOTE_USECONDS;
             time /= 1_000;
         }
-        if time > isize::max_value() {
-            unit = FilterFlag::NOTE_MSECONDS;
+        if time > isize::max_value() as u128 {
+            unit = FilterFlag::empty(); // default is milliseconds
             time /= 1_000;
         }
-        if time > isize::max_value() {
+        if time > isize::max_value() as u128 {
             unit = FilterFlag::NOTE_SECONDS;
             time /= 1_000;
         }
