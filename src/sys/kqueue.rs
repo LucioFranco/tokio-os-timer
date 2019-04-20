@@ -17,11 +17,28 @@ impl Timer {
         if let TimeSpec::Timeout(..) = timer {
             flags |= EventFlag::EV_ONESHOT;
         }
+
         let time = match timer {
-            TimeSpec::Timeout(d) | TimeSpec::Interval(d) => {
-                d.as_secs() as isize * 1_000 + d.subsec_millis() as isize
-            }
+            TimeSpec::Timeout(d) | TimeSpec::Interval(d) => d,
         };
+
+        // We need to decide what time unit we want...
+        // We want the smallest unit that we can use without overflow, so:
+        let mut unit = FilterFlag::NOTE_NSECONDS;
+        let mut time = time.as_nanos();
+        if time > isize::max_value() {
+            unit = FilterFlag::NOTE_USECONDS;
+            time /= 1_000;
+        }
+        if time > isize::max_value() {
+            unit = FilterFlag::NOTE_MSECONDS;
+            time /= 1_000;
+        }
+        if time > isize::max_value() {
+            unit = FilterFlag::NOTE_SECONDS;
+            time /= 1_000;
+        }
+        let time = time as isize;
 
         kevent(
             self.0,
@@ -29,7 +46,7 @@ impl Timer {
                 1,
                 EventFilter::EVFILT_TIMER,
                 flags,
-                FilterFlag::empty(),
+                unit,
                 time,
                 0,
             )],
