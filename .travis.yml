@@ -2,4 +2,4 @@ language: rust
 cache: cargo
 rust: stable
 os: osx
-script: cargo check --all-targets
+script: cargo test
