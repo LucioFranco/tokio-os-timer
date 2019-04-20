@@ -18,7 +18,9 @@ impl Timer {
             flags |= EventFlag::EV_ONESHOT;
         }
         let time = match timer {
-            TimeSpec::Timeout(d) | TimeSpec::Interval(d) => d.as_secs() * 1_000 + d.subsec_millis(),
+            TimeSpec::Timeout(d) | TimeSpec::Interval(d) => {
+                d.as_secs() as isize * 1_000 + d.subsec_millis() as isize
+            }
         };
 
         kevent(
@@ -51,7 +53,7 @@ impl Timer {
         match kevent(self.0, &[], &mut ev[..], 0).map_err(|e| e.as_errno().unwrap())? {
             1 => {
                 // timer fired!
-                assert_eq!(ev[0].ident, 1);
+                assert_eq!(ev[0].ident(), 1);
                 Ok(())
             }
             0 => {
