@@ -13,24 +13,24 @@ impl Timer {
     }
 
     pub(crate) fn set(&mut self, timer: TimeSpec) -> io::Result<()> {
-        let mut flags = EV_ADD | EV_ENABLE;
+        let mut flags = EventFlag::EV_ADD | EventFlag::EV_ENABLE;
         if let TimeSpec::Timeout(..) = timer {
-            flags |= EV_ONESHOT;
+            flags |= EventFlag::EV_ONESHOT;
         }
         let time = match timer {
-            TimeSpec::Delay(d) | TimeSpec::Interval(d) => d.as_secs() * 1_000 + d.subsec_millis(),
+            TimeSpec::Timeout(d) | TimeSpec::Interval(d) => d.as_secs() * 1_000 + d.subsec_millis(),
         };
 
         kevent(
             self.0,
-            &[KEvent {
-                ident: 1,
-                filter: EventFilter::EVFILT_TIMER,
+            &[KEvent::new(
+                1,
+                EventFilter::EVFILT_TIMER,
                 flags,
-                fflags: FilterFlag::empty(),
-                data: time,
-                udata: 0,
-            }],
+                FilterFlag::empty(),
+                time,
+                0,
+            )],
             &mut [],
             0,
         )
@@ -40,7 +40,14 @@ impl Timer {
     }
 
     pub(crate) fn check(&mut self) -> io::Result<()> {
-        let mut ev = [KEvent::default()];
+        let mut ev = [KEvent::new(
+            0,
+            EventFilter::EVFILT_TIMER,
+            EventFlag::empty(),
+            FilterFlag::empty(),
+            0,
+            0,
+        )];
         match kevent(self.0, &[], &mut ev[..], 0).map_err(|e| e.as_errno().unwrap())? {
             1 => {
                 // timer fired!
@@ -49,7 +56,10 @@ impl Timer {
             }
             0 => {
                 // timer has not fired?
-                Err(io::Error::new(io::ErrorKind::WouldBlod))
+                Err(io::Error::new(
+                    io::ErrorKind::WouldBlock,
+                    "no timer kevents",
+                ))
             }
             n => unreachable!(),
         }
